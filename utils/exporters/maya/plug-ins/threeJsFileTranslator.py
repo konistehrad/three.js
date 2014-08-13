@@ -201,10 +201,13 @@ class ThreeJsWriter(object):
                 self._exportFaceColors(face)
 
     def _exportFaceBitmask(self, face, typeBitmask, hasMaterial=True):
-        if face.polygonVertexCount() == 4:
+        vertCount = face.polygonVertexCount()
+        if vertCount == 4:
             faceBitmask = 1
-        else:
+        elif vertCount == 3:
             faceBitmask = 0
+        else:
+            raise RuntimeError('Bad vert count on face: %d; please triangulate and try again' % (vertCount,))
 
         if hasMaterial:
             faceBitmask |= (1 << 1)
