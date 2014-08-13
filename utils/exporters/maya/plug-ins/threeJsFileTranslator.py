@@ -187,12 +187,12 @@ class ThreeJsWriter(object):
 
         for face in mesh.faces:
             materialIndex = self._getMaterialIndex(face, mesh)
-            hasMaterial = materialIndex != -1
+            # affects bitmask, might not come down with mat index if options['materials'] is false
+            hasMaterial = self.options['materials'] and materialIndex != -1
             self._exportFaceBitmask(face, typeBitmask, hasMaterial=hasMaterial)
             self.faces += map(lambda x: x + self.verticeOffset, face.getVertices())
-            if self.options['materials']:
-                if hasMaterial:
-                    self.faces.append(materialIndex)
+            if hasMaterial:
+                self.faces.append(materialIndex)
             if self.options['uvs'] and face.hasUVs():
                 self.faces += map(lambda v: face.getUVIndex(v) + self.uvOffset, range(face.polygonVertexCount()))
             if self.options['normals']:
