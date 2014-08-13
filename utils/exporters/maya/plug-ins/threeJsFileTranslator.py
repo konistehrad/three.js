@@ -32,6 +32,7 @@ class ThreeJsWriter(object):
         self._parseOptions(optionString)
 
         self.verticeOffset = 0
+        self.normalOffset = 0
         self.uvOffset = 0
         self.vertices = []
         self.materials = []
@@ -137,6 +138,7 @@ class ThreeJsWriter(object):
             print("Exporting faces")
             self._exportFaces(mesh)
             self.verticeOffset += len(mesh.getPoints())
+            self.normalOffset += len(mesh.getNormals())
             self.uvOffset += mesh.numUVs()
         if self.options['normals']:
             print("Exporting normals")
@@ -232,7 +234,7 @@ class ThreeJsWriter(object):
 
     def _exportFaceVertexNormals(self, face):
         for i in range(face.polygonVertexCount()):
-            self.faces.append(face.normalIndex(i))
+            self.faces.append(face.normalIndex(i) + self.normalOffset)
 
     def _exportNormals(self, mesh):
         for normal in mesh.getNormals():
