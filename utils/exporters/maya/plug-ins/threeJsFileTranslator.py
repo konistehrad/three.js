@@ -273,6 +273,8 @@ class ThreeJsWriter(object):
             self._exportBumpMap(result, mat)
         if self.options["diffuseMaps"]:
             self._exportDiffuseMap(result, mat)
+        if self.options["colors"]:
+            result['vertexColors'] = 2
 
         return result
 
