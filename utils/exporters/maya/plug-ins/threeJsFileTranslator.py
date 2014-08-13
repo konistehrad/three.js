@@ -18,6 +18,9 @@ kDefaultOptionsString = '0'
 
 FLOAT_PRECISION = 8
 
+def hexcolor(c):
+    return ( int(c[0] * 255) << 16  ) + ( int(c[1] * 255) << 8 ) + int(c[2] * 255)
+
 class ThreeJsWriter(object):
     def __init__(self):
         self.componentKeys = ['vertices', 'normals', 'colors', 'uvs', 'faces',
@@ -34,6 +37,10 @@ class ThreeJsWriter(object):
         self.materials = []
         self.faces = []
         self.normals = []
+
+        self.colorMap = {}
+        self.colors = []
+
         self.uvs = []
         self.morphTargets = []
         self.bones = []
@@ -74,6 +81,9 @@ class ThreeJsWriter(object):
             'normals': self.normals,
             'materials': self.materials,
         }
+
+        if self.options['colors']:
+            output['colors'] = self.colors
 
         if self.options['bakeAnimations']:
             output['morphTargets'] = self.morphTargets
@@ -187,6 +197,8 @@ class ThreeJsWriter(object):
                 self.faces += map(lambda v: face.getUVIndex(v) + self.uvOffset, range(face.polygonVertexCount()))
             if self.options['normals']:
                 self._exportFaceVertexNormals(face)
+            if self.options['colors']:
+                self._exportFaceColors(face)
 
     def _exportFaceBitmask(self, face, typeBitmask, hasMaterial=True):
         if face.polygonVertexCount() == 4:
@@ -200,7 +212,20 @@ class ThreeJsWriter(object):
         if self.options['uvs'] and face.hasUVs():
             faceBitmask |= (1 << 3)
 
+        if self.options['colors'] and face.hasColor():
+            faceBitmask |= (1 << 7)
+
         self.faces.append(typeBitmask | faceBitmask)
+
+    def _exportFaceColors(self,face):
+        if face.hasColor():
+            for rawColor in face.getColors():
+                hc = hexcolor(rawColor.rgb)
+                if not hc in self.colorMap:
+                    self.colorMap[hc] = len(self.colors)
+                    self.colors.append(hc)
+                self.faces.append(self.colorMap[hc])
+
 
     def _exportFaceVertexNormals(self, face):
         for i in range(face.polygonVertexCount()):
@@ -248,6 +273,8 @@ class ThreeJsWriter(object):
             self._exportBumpMap(result, mat)
         if self.options["diffuseMaps"]:
             self._exportDiffuseMap(result, mat)
+        if self.options["colors"]:
+            result['vertexColors'] = 2
 
         return result
 
