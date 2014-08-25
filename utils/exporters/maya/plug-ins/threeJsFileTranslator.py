@@ -394,8 +394,13 @@ class ThreeJsWriter(object):
                 if (i == 0): 
                     space = MSpace.kWorld
 
-                (bone["pos"], bone["scl"], bone["rot"], bone["rotq"]) = self._getInfluenceData(influenceDAGs[i], space)
-                
+                (pos, scl, rot, rotq) = self._getInfluenceData(influenceDAGs[i], space)
+
+                bone["pos"] = pos
+                bone["scl"] = scl
+                bone["rot"] = rot
+                bone["rotq"] = rotq
+
                 # Find the parent dag path of this bone
                 parentDagPath = self._getParentDAGPath(influenceDAGs[i])
                 
@@ -473,6 +478,10 @@ class ThreeJsWriter(object):
                 # applied by each frame of the animation.
                 #
                 for boneIndex in xrange(numInfluences):
+                    lastPos = None
+                    lastScl = None
+                    lastRot = None
+
                     boneAnimation = {}
                     boneAnimation["parent"] = self.bones[boneIndex]["parent"]
                     boneAnimation["keys"] = []
@@ -485,10 +494,26 @@ class ThreeJsWriter(object):
                         MAnimControl.setCurrentTime(animationTime)
                         
                         keyFrame = {}
-                        keyFrame["time"] = frameIndex * framePeriod 
                         
-                        (keyFrame["pos"], keyFrame["scl"], rot, keyFrame["rot"]) = self._getInfluenceData(influenceDAGs[boneIndex], space)
-                        boneAnimation["keys"].append(keyFrame)
+                        (pos, scl, rot, rotq) = self._getInfluenceData(influenceDAGs[boneIndex], space)
+
+                        if lastPos is None or pos != lastPos:
+                            keyFrame["pos"] = pos
+                            lastPos = pos
+
+                        if lastScl is None or scl != lastScl:
+                            keyFrame["scl"] = scl
+                            lastScl = scl
+
+                        if lastRot is None or rotq != lastRot:
+                            keyFrame["rot"] = rotq
+                            lastRot = rotq
+
+
+                        if len(keyFrame) > 0:
+                            keyFrame["time"] = frameIndex * framePeriod 
+                            boneAnimation["keys"].append(keyFrame)
+
                     self.animation["hierarchy"].append(boneAnimation)
 
                 
