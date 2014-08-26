@@ -13,18 +13,20 @@ global proc int ThreeJsExportScript(string $parent, string $action, string $sett
                 columnLayout -adj true -cal "center";
                     checkBox -v true -l "Vertices" vertsCb;
                     checkBox -v true -l "Faces" facesCb;
-                    checkBox -v true -l "Normals" normalsCb;
+                    checkBox -v false -l "Normals" normalsCb;
                     checkBox -v true -l "UVs" uvsCb;
-                    checkBox -v false -l "Material Indices" materialsCb;
+                    checkBox -v true -l "Material Indices" materialsCb;
                     checkBox -v false -l "Colors" colorsCb;
-                    checkBox -v false -l "Skin Weights" skinWeightsCb;
+                    checkBox -v true -l "Skin Weights" skinWeightsCb;
+                    checkBox -v true -l "Diffuse Maps" diffuseCb;
+                    checkBox -v true -l "Copy Textures" copyTexCb;
                     
                 setParent ..;
             setParent ..;
             
             frameLayout -collapsable true -label "Animations";
                 columnLayout -adj true;
-                    checkBox -v false -l "Animations" animationsCb;
+                    checkBox -v true -l "Animations" animationsCb;
                     
                     intSliderGrp -label "Vertex Weight Count" -field true
                         -fieldMinValue 2 -fieldMaxValue 8
@@ -46,6 +48,10 @@ global proc int ThreeJsExportScript(string $parent, string $action, string $sett
             $option += "uvs ";
         if (`checkBox -q -v materialsCb`)
             $option += "materials ";
+        if (`checkBox -q -v diffuseCb`)
+            $option += "diffuseMaps ";
+        if (`checkBox -q -v copyTexCb`)
+            $option += "copyTextures ";
         if (`checkBox -q -v colorsCb`)
             $option += "colors ";
         if (`checkBox -q -v skinWeightsCb`)

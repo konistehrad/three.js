@@ -9,9 +9,11 @@ Modified: Black Tower Entertainment, LLC (4/2/14)
     
 """
 
+import os
 import sys
+import shutil
 import json
-
+import pymel.core.general as pmgen
 import maya.cmds as mc
 from maya.OpenMaya import *
 from maya.OpenMayaMPx import *
@@ -76,7 +78,7 @@ class ThreeJsError(Exception):
 
 class ThreeJsWriter(object):
     def __init__(self):
-        self.componentKeys = ['vertices', 'normals', 'colors', 'uvs', 'materials', 'faces', "animation", "bones", "skinWeights", "skinIndices"]
+        self.componentKeys = ['vertices', 'normals', 'colors', 'uvs', 'materials', 'faces', 'diffuseMaps', "animation", "bones", "skinWeights", "skinIndices", 'copyTextures']
 
     def _parseOptions(self, optionsString):
         self.options = dict([(x, False) for x in self.componentKeys])
@@ -108,22 +110,62 @@ class ThreeJsWriter(object):
             bitmask |= 256
         return bitmask
 
+    def _exportFile(self, result, mapFile, mapType):
+        fName = os.path.basename(mapFile.ftn.get())
+        if self.options['copyTextures']:
+            shutil.copy2(mapFile.ftn.get(), os.path.dirname(self.path) + "/" + fName)
+        result["map" + mapType] = fName
+        result["map" + mapType + "Repeat"] = [1, 1]
+        result["map" + mapType + "Wrap"] = ["repeat", "repeat"]
+        result["map" + mapType + "Anistropy"] = 4
 
-    def _getMaterial(self,shadingEngine):
-        # // attach a function set to the shading engine
+    def _exportDiffuseMap(self, result, shadingEngine):
+        targetMatName = self._getMaterialName(shadingEngine)
+        for localMat in pmgen.ls(targetMatName, type='lambert'):
+            localMatName = localMat.name()
+            if localMatName == targetMatName:
+                for f in localMat.attr('color').inputs():
+                    # result["colorDiffuse"] = f.attr('defaultColor').get()
+                    self._exportFile(result, f, "Diffuse")
+                break
+
+    def _getMaterialName(self,shadingEngine):
+        # attach a function set to the shading engine
         fn = MFnDependencyNode( shadingEngine )
 
-        # // get access to the surfaceShader attribute. This will be connected to
-        # // lambert , phong nodes etc.
+        # get access to the surfaceShader attribute. This will be connected to
+        # lambert , phong nodes etc.
         sshader = fn.findPlug("surfaceShader")
 
-        # // will hold the connections to the surfaceShader attribute
+        # will hold the connections to the surfaceShader attribute
         materialPlugs = MPlugArray()
 
-        # // get the material connected to the surface shader
+        # get the material connected to the surface shader
         sshader.connectedTo(materialPlugs,True,False)
 
-        # // if we found a material
+        # if we found a material
+        if(materialPlugs.length() > 0):
+            materialNode = materialPlugs[0].node()
+            depNode = MFnDependencyNode(materialNode)
+            return depNode.name()
+
+        return None
+
+    def _getMaterial(self,shadingEngine):
+        # attach a function set to the shading engine
+        fn = MFnDependencyNode( shadingEngine )
+
+        # get access to the surfaceShader attribute. This will be connected to
+        # lambert , phong nodes etc.
+        sshader = fn.findPlug("surfaceShader")
+
+        # will hold the connections to the surfaceShader attribute
+        materialPlugs = MPlugArray()
+
+        # get the material connected to the surface shader
+        sshader.connectedTo(materialPlugs,True,False)
+
+        # if we found a material
         if(materialPlugs.length() > 0):
             materialNode = materialPlugs[0].node()
             depNode = MFnDependencyNode(materialNode)
@@ -178,10 +220,17 @@ class ThreeJsWriter(object):
                             "vertexColors": False
                         }
 
-                        # phong props
-                        converted["colorSpecular"] = mcolor2hex(mat.specularColor())
-                        converted["specularCoef"] = mat.cosPower()
+                        if isinstance(mat, MFnPhongShader):
+                            # phong props
+                            converted["colorSpecular"] = mcolor2hex(mat.specularColor())
+                            converted["specularCoef"] = mat.cosPower()
 
+                    except Exception, e:
+                        print e
+
+                    try:
+                        if options['diffuseMaps']:
+                            self._exportDiffuseMap(converted, shader)
                     except Exception, e:
                         print e
 
@@ -383,7 +432,13 @@ class ThreeJsWriter(object):
                 weights[vId] = vWeights
         
         return weights
-        
+    
+    def _epsilonEqual(self,v1,v2):
+        epsilon = 1.0/pow(10,6)
+        for i in range(len(v1)):
+            if abs(v1[i] - v2[i]) > epsilon:
+                return False
+        return True
     
     # This method is responsible for generating all of the animation data.
     def _exportAnimationData(self, dagPath, object):
@@ -556,15 +611,15 @@ class ThreeJsWriter(object):
                         
                         (pos, scl, rot, rotq) = self._getInfluenceData(influenceDAGs[boneIndex], space)
 
-                        if lastPos is None or pos != lastPos:
+                        if lastPos is None or not self._epsilonEqual(pos, lastPos):
                             keyFrame["pos"] = pos
                             lastPos = pos
 
-                        if lastScl is None or scl != lastScl:
+                        if lastScl is None or not self._epsilonEqual(scl, lastScl):
                             keyFrame["scl"] = scl
                             lastScl = scl
 
-                        if lastRot is None or rotq != lastRot:
+                        if lastRot is None or not self._epsilonEqual(rotq, lastRot):
                             keyFrame["rot"] = rotq
                             lastRot = rotq
 
