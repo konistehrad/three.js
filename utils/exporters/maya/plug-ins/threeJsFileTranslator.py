@@ -214,7 +214,7 @@ class ThreeJsWriter(object):
                             "colorAmbient": mcolor2hex( mat.ambientColor() ),
                             "depthTest": True,
                             "depthWrite": True,
-                            "shading": mat.__class__.__name__,
+                            "shading": ('phong' if isinstance(mat, MFnPhongShader) else 'lambert'),
                             "transparency": mat.transparency().a,
                             "transparent": mat.transparency().a != 1.0,
                             "vertexColors": False
