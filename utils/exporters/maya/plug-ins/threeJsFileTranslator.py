@@ -49,6 +49,12 @@ kFrameRateLookup = {
     MTime.k75FPS: 75
 };
 
+def hexcolor(c):
+    return ( int(c[0] * 255) << 16  ) + ( int(c[1] * 255) << 8 ) + int(c[2] * 255)
+
+def mcolor2hex(c):
+    return hexcolor([c.r,c.g,c.b])
+
 # adds decimal precision to JSON encoding
 class DecimalEncoder(json.JSONEncoder):
     def _iterencode(self, o, markers=None):
@@ -102,6 +108,34 @@ class ThreeJsWriter(object):
             bitmask |= 256
         return bitmask
 
+
+    def _getMaterial(self,shadingEngine):
+        # // attach a function set to the shading engine
+        fn = MFnDependencyNode( shadingEngine )
+
+        # // get access to the surfaceShader attribute. This will be connected to
+        # // lambert , phong nodes etc.
+        sshader = fn.findPlug("surfaceShader")
+
+        # // will hold the connections to the surfaceShader attribute
+        materialPlugs = MPlugArray()
+
+        # // get the material connected to the surface shader
+        sshader.connectedTo(materialPlugs,True,False)
+
+        # // if we found a material
+        if(materialPlugs.length() > 0):
+            materialNode = materialPlugs[0].node()
+            depNode = MFnDependencyNode(materialNode)
+            if materialNode.hasFn( MFn.kPhong ):
+                print "Found phong material: %s" % (depNode.name(),)
+                return MFnPhongShader(materialNode)
+            if materialNode.hasFn( MFn.kLambert ):
+                print "Found lambert material: %s" % (depNode.name(),)
+                return MFnLambertShader(materialNode)
+
+        return None
+
     def _exportGeometryData(self, dagPath, component):
         mesh = MFnMesh(dagPath)
         options = self.options.copy()
@@ -125,8 +159,33 @@ class ThreeJsWriter(object):
             try:
                 shaders = MObjectArray()
                 mesh.getConnectedShaders(0, shaders, materialIndices)
-                while len(self.materials) < shaders.length():
-                    self.materials.append({}) # placeholder material definition
+                for i in range(shaders.length()):
+                    converted = {}
+                    shader = shaders[i]
+                    mat = self._getMaterial(shader)
+
+                    try:
+                        # lambert props
+                        converted = {
+                            "blending": "NormalBlending",
+                            "colorDiffuse": mcolor2hex( mat.color() * mat.diffuseCoeff() ),
+                            "colorAmbient": mcolor2hex( mat.ambientColor() ),
+                            "depthTest": True,
+                            "depthWrite": True,
+                            "shading": mat.__class__.__name__,
+                            "transparency": mat.transparency().a,
+                            "transparent": mat.transparency().a != 1.0,
+                            "vertexColors": False
+                        }
+
+                        # phong props
+                        converted["colorSpecular"] = mcolor2hex(mat.specularColor())
+                        converted["specularCoef"] = mat.cosPower()
+
+                    except Exception, e:
+                        print e
+
+                    self.materials.append(converted) # placeholder material definition
             except:
                 self.materials = [{}]
 
