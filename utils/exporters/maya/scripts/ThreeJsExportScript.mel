@@ -19,7 +19,7 @@ global proc int ThreeJsExportScript(string $parent, string $action, string $sett
                     checkBox -v false -l "Colors" colorsCb;
                     checkBox -v true -l "Skin Weights" skinWeightsCb;
                     checkBox -v true -l "Diffuse Maps" diffuseCb;
-                    checkBox -v true -l "Copy Textures" copyTexCb;
+                    checkBox -v false -l "Copy Textures" copyTexCb;
                     
                 setParent ..;
             setParent ..;
