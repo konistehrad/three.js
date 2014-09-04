@@ -434,7 +434,7 @@ class ThreeJsWriter(object):
         return weights
     
     def _epsilonEqual(self,v1,v2):
-        epsilon = 1.0/pow(10,6)
+        epsilon = 1.0/pow(10,8)
         for i in range(len(v1)):
             if abs(v1[i] - v2[i]) > epsilon:
                 return False
@@ -611,15 +611,15 @@ class ThreeJsWriter(object):
                         
                         (pos, scl, rot, rotq) = self._getInfluenceData(influenceDAGs[boneIndex], space)
 
-                        if lastPos is None or not self._epsilonEqual(pos, lastPos):
+                        if lastPos is None or not self._epsilonEqual(pos, lastPos) or frameIndex is animationFrameRange:
                             keyFrame["pos"] = pos
                             lastPos = pos
 
-                        if lastScl is None or not self._epsilonEqual(scl, lastScl):
+                        if lastScl is None or not self._epsilonEqual(scl, lastScl) or frameIndex is animationFrameRange :
                             keyFrame["scl"] = scl
                             lastScl = scl
 
-                        if lastRot is None or not self._epsilonEqual(rotq, lastRot):
+                        if lastRot is None or not self._epsilonEqual(rotq, lastRot) or frameIndex is animationFrameRange :
                             keyFrame["rot"] = rotq
                             lastRot = rotq
 
