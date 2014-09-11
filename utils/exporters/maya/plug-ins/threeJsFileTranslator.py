@@ -384,8 +384,16 @@ class ThreeJsWriter(object):
         position = [posVect.x, posVect.y, posVect.z]
         rotation = [eulerRot.x, eulerRot.y, eulerRot.z]
         rotq = [quatRot.x, quatRot.y, quatRot.z, quatRot.w]
-                
-        return (position, scale, rotation, rotq)
+        
+        #CUSTOM ATTR CHECK
+        jnt=DAGPath.partialPathName()
+        custAttr=[]
+        custList=mc.listAttr(jnt, ud=1, s=1, k=1)
+        if custList:
+            for attr in custList:
+                custAttr.append((attr, mc.getAttr("%s.%s"%(jnt,attr))))
+        
+        return (position, scale, rotation, rotq, custAttr)
             
     # This method returns a dictionary of all vertices in a mesh with their associated influence weights.
     # Based on http://www.charactersetup.com/tutorial_skinWeights.html
@@ -508,13 +516,18 @@ class ThreeJsWriter(object):
                 if (i == 0): 
                     space = MSpace.kWorld
 
-                (pos, scl, rot, rotq) = self._getInfluenceData(influenceDAGs[i], space)
+                (pos, scl, rot, rotq, custAttr) = self._getInfluenceData(influenceDAGs[i], space)
 
                 bone["pos"] = pos
                 bone["scl"] = scl
                 bone["rot"] = rot
                 bone["rotq"] = rotq
-
+                
+                #CUSTOM ATTR ADD
+                if custAttr:
+                    for cust in custAttr:
+                        bone[cust[0]] = cust[1]
+                
                 # Find the parent dag path of this bone
                 parentDagPath = self._getParentDAGPath(influenceDAGs[i])
                 
@@ -595,7 +608,8 @@ class ThreeJsWriter(object):
                     lastPos = None
                     lastScl = None
                     lastRot = None
-
+                    lastCust = {}
+                    
                     boneAnimation = {}
                     boneAnimation["parent"] = self.bones[boneIndex]["parent"]
                     boneAnimation["keys"] = []
@@ -609,7 +623,7 @@ class ThreeJsWriter(object):
                         
                         keyFrame = {}
                         
-                        (pos, scl, rot, rotq) = self._getInfluenceData(influenceDAGs[boneIndex], space)
+                        (pos, scl, rot, rotq, custAttr) = self._getInfluenceData(influenceDAGs[boneIndex], space)
 
                         if lastPos is None or not self._epsilonEqual(pos, lastPos) or frameIndex is animationFrameRange:
                             keyFrame["pos"] = pos
@@ -622,7 +636,14 @@ class ThreeJsWriter(object):
                         if lastRot is None or not self._epsilonEqual(rotq, lastRot) or frameIndex is animationFrameRange :
                             keyFrame["rot"] = rotq
                             lastRot = rotq
-
+                        
+                        if custAttr:
+                            for cust in custAttr:
+                                if cust[0] not in lastCust.keys():
+                                    lastCust[cust[0]]=0
+                                if cust[1]!=lastCust[cust[0]] or frameIndex is animationFrameRange:                                    
+                                    keyFrame[cust[0]] = cust[1]
+                                    lastCust[cust[0]] = cust[1]
 
                         if len(keyFrame) > 0:
                             keyFrame["time"] = frameIndex * framePeriod 
