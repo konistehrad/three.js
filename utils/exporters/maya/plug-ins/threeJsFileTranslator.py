@@ -305,7 +305,7 @@ class ThreeJsWriter(object):
             shutil.copy2(mapFile.ftn.get(), os.path.dirname(self.path) + "/" + fName)
         result["map" + mapType] = fName
         result["map" + mapType + "Repeat"] = [1, 1]
-        result["map" + mapType + "Wrap"] = ["repeat", "repeat"]
+        result["map" + mapType + "Wrap"] = ["clamp", "clamp"]
         result["map" + mapType + "Anistropy"] = 4
 
     def _exportBones(self):
