@@ -106,7 +106,7 @@ class ThreeJsWriter(object):
 
     def _allMeshes(self):
         if not hasattr(self, '__allMeshes'):
-            self.__allMeshes = filter(lambda m: len(m.listConnections()) > 0, ls(type='mesh'))
+            self.__allMeshes = filter(lambda m: len(m.listConnections()) > 0 and not 'orig' in m.name().lower(), ls(type='mesh'))
         return self.__allMeshes
 
     def _parseOptions(self, optionsString):
